@@ -9,6 +9,8 @@
 #define REGRBITS 32 //number of bits in a register
 #define LINELEN 500 //length of max line
 #define MAXLABEL 50 //length of max label
+#define REGSNUM 16 // number if registers
+#define OPCODESNUM 22// number of opcodes
 /*
 Register Number Register Name Purpose
 0 $zero Constant zero
@@ -55,7 +57,27 @@ Opcode Number Name Meaning
 */
 
 
-const char hex_vals[16][1] = { "0","1","2","3","4","5","6","7" ,"8","9","A","B","C","D","E","F" };
+const static char hex_vals[16][1] = { "0","1","2","3","4","5","6","7" ,"8","9","A","B","C","D","E","F" };
+const static char  registers[REGSNUM][5] = { "$zero", "$imm", "$v0 ", "$a0", "$a1", "$t0", "$t1", "$t2", "$t3", "$s0", "$s1","$s2", "$gp ", "$sp", "$fp", "$ra" };
+const static char opcodes[OPCODESNUM][4] = { "add", "sub", "and", "or", "xor", "mul", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt" };
+
+int get_reg_num(char *reg_name) {//receives name of a reg and returnes its decimal value
+	int i = 0; 
+	for (int i = 0; i < REGSNUM; i++) {
+		if (!strcmp(reg_name, registers[i]))
+			return i;
+	}
+	return -1;
+}
+
+int get_opcode_num(char *opcode) {//receives an opcode and returns its decimal value 
+	int i = 0;
+	for (int i = 0; i < OPCODESNUM; i++) {
+		if (!strcmp(opcode, opcodes[i]))
+			return i;
+	}
+	return -1;
+}
 
 int string_length(char s[])//returns the length of a char array
 {
@@ -93,13 +115,23 @@ char* check_label(char * ptr) {//check if word ends with :, and return the label
 	return label;
 }
 
+int get_label_pc(char *label, char label_table[1024][2][MAXLABEL], int labels_num) {//gets the labels table and a label and returns its PC
+	int i = 0;
+	for (i = 0; i < labels_num; i++) {
+		if (!strcmp(label, label_table[i][1])) {
+			return atoi(label_table[i][0]);
+		}
+	}
+	return -1;
+}
+
 
 
 int main(int argc, char** argv) {
 	char line[LINELEN];
 	int labels_num=0, pc = 0;
 	char delim[] = " ,\t\n";//the characters that break the line
-	char label_table[1024][2][50];//max 1024 labels, 2 options for the name(pc and name), max len of label
+	char label_table[1024][2][MAXLABEL];//max 1024 labels, 2 options for the name(pc and name), max len of label
 	char pc_as_str[20];//the address of the pc as a string
 	FILE *input;
 	input = fopen(argv[1], "r");
@@ -146,7 +178,9 @@ int main(int argc, char** argv) {
 			}
 		}
 	}
-	//rewind
+	rewind(input);
+	//2nd iteration over the code
+
 	fclose(input);
 	return 1;
 }
