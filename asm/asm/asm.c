@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,11 +95,9 @@ char* check_label(char * ptr) {//check if word ends with :, and return the label
 
 
 
-
-
 int main(int argc, char** argv) {
 	char line[LINELEN];
-	int labels_num, pc = 0;
+	int labels_num=0, pc = 0;
 	char delim[] = " ,\t\n";//the characters that break the line
 	char label_table[1024][2][50];//max 1024 labels, 2 options for the name(pc and name), max len of label
 	char pc_as_str[20];//the address of the pc as a string
@@ -112,8 +111,8 @@ int main(int argc, char** argv) {
 	//first run over the code for the labels
 	while (fgets(line, LINELEN, input) != NULL) {
 		ptr = strtok(line, delim);
+		bool is_first = true;
 		while (ptr != NULL) {
-			bool is_first = true;
 			if (is_first) {// if we are in the first word in the line 
 				char *label = check_label(ptr);
 				if (label != NULL) {//if we have a label
@@ -129,17 +128,25 @@ int main(int argc, char** argv) {
 					}
 					else {//regular cmd line 
 						pc++;
+						ptr = strtok(NULL, delim);
 					}
 				}
 				is_first = false;
 			}
 			else {
 				//check if we need immediate
-				if (strcmp(ptr, "$imm")) {
+				if (!strcmp(ptr, "$imm")) {
 					pc++;
 				}
 				ptr = strtok(NULL, delim);// move to next word
+				if (ptr != NULL) {
+					if (!strcmp(ptr, "#"))//skip this line we reached the # (comment)
+						break;
+				}
 			}
 		}
 	}
+	//rewind
+	fclose(input);
+	return 1;
 }
