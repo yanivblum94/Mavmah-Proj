@@ -1,3 +1,4 @@
+
 #define _CRT_SECURE_NO_WARNINGS
 #include <string.h>
 #include <stdio.h>
@@ -33,7 +34,7 @@ Register Number Register Name Purpose
 
 Opcode Number Name Meaning
 0 add R[rd] = R[rs] + R[rt]
-1 sub R[rd] = R[rs] – R[rt]
+1 sub R[rd] = R[rs] ï¿½ R[rt]
 2 and R[rd] = R[rs] & R[rt]
 3 or R[rd] = R[rs] | R[rt]
 4 xor R[rd] = R[rs] ^ R[rt]
@@ -184,3 +185,4 @@ int main(int argc, char** argv) {
 	fclose(input);
 	return 1;
 }
+
