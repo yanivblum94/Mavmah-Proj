@@ -16,6 +16,7 @@ bin:	sub	$sp, $sp, $imm, 4						#adjust stack for 4 items	(every enter is 4 byte
 		jal $imm, $zero, $zero, bin					#  recursive call: $v0 = bin(n-1,k)
 		add $v0, $v0, $s0, 0						# v0 = bin(n-1,k-1) + bin(n-1,k)
 
+
 		lw $ra, $sp, $imm, 0						# restore ra from 0($sp)
 		lw $a0, $sp, $imm, 1						# restore a0 from 1($sp)
 		lw $a1, $sp, $imm, 2						# restore a1 from 2($sp)
