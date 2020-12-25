@@ -17,17 +17,17 @@
 for1:
 			add $t0, $zero, $imm, 4						# t0 = 4
 			sub	$t0, $s0, $t0, 0						# t0 = i - 4
-			branch 	bgt, $t0, $zero, exitloop1			# if i - 4 > 0 goto exit loop1
+			bgt, $t0, $zero, exitloop1			# if i - 4 > 0 goto exit loop1
 
 for2:							
 			add $t0, $zero, $imm, 4						# t0 = 4
 			sub	$t0, $s2, $t0, 0						# t0 = n - 4
-			branch bgt $t0,	$zero, exitloop2			# if n - 4 > 0 goto exit loop2
+			bgt $t0,	$zero, exitloop2			# if n - 4 > 0 goto exit loop2
 
 for3:							
 			add $t0, $zero, $zero, 4					# t0 = 4
-			sub	$t0, $s1, $t0, 0						# t0 = j - 4
-			branch bgt, $t0, $zero, exitloop3			# if j - 4 > 0 goto exit loop3
+			sub $t0, $s1, $t0, 0						# t0 = j - 4
+			bgt, $t0, $zero, exitloop3			# if j - 4 > 0 goto exit loop3
 
 			add $t0, $zero, $imm, 1						# t0 = 1
 			sub	$t1, $s0, $t0, 0						# t1 = i - 1
