@@ -75,3 +75,26 @@ int main(int argc, char** argv[]) {
 	printf(res);
 	return 0;
 }
+
+
+
+// checking if any interupt is on - function called every clock cycle
+static int check_signal() {
+	int irq;
+	irq = (hw_regs[0] && hw_regs[3]) || (hw_regs[1] && hw_regs[4]) || (hw_regs[2] && hw_regs[5]);
+	return irq;
+}
+
+
+/* setting registers properly before moving into interput routine
+function is called if we are not in interput routine  allready
+or the current PC instruction is not imm
+*/
+static void move_to_interrupt_Routine() {
+	char* curr_inst = instructions[pc];
+	if (!is_immediate(curr_inst)) {	// curr instruction is not imm -> move to interrput routine
+		hw_regs[7] = pc;
+		pc = hw_regs[6];
+	}
+		// need to add a check if we are in interrupt routine and act properly 
+}
