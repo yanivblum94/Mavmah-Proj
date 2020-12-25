@@ -141,7 +141,7 @@ int get_label_index(char *label) {//gets the labels table and a label and return
 	return -1;
 }
 
-void write_dmemin(char* file_name) {
+void write_dmemin(char* file_name) {//writes the dmem_out file
 	int i = 0;
 	FILE *imem_file = fopen(file_name, "w");
 	if (imem_file == NULL) {
@@ -160,7 +160,7 @@ void write_dmemin(char* file_name) {
 }
 
 
-handle_word_cmd(char* address, char* data) {
+handle_word_cmd(char* address, char* data) {//method that updates the dmem array for .word command
 	int index, val;
 	index = dec_from_string(address);
 	val = dec_from_string(data);
