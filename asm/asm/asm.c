@@ -251,7 +251,7 @@ int main(int argc, char** argv) {
 			}
 			//now we have a  pointer to a valid cmd
 			int temp = get_opcode_num(ptr);
-			char opcode_hex[3];
+			char opcode_hex[5];
 			sprintf(opcode_hex, "%02X", temp);
 			fputs(opcode_hex, output);// enter opcode
 			ptr = strtok(NULL, delim);//move to next word
