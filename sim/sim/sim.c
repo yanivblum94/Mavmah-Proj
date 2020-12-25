@@ -53,11 +53,10 @@ bool is_immediate(char* inst) {//checks if an instruction is an immediate type
 	return (inst[2] == "1" || inst[3] == "1" || inst[4] == "1");
 }
 
-void update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place ndexed by the PC
-	FILE *input;
+int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place ndexed by the PC, returns num of PC's
 	int i = 0;
 	char line[LINELEN];
-	input = fopen(file_name, "r");
+	FILE *input = fopen(file_name, "r");
 	if (input == NULL) {
 		fprintf(stderr, "Can't open input file \n");
 		exit(1);
@@ -71,8 +70,10 @@ void update_instructions(char* file_name) {//updates the instructions array - pu
 
 int main(int argc, char** argv[]) {
 	char res[160];
-	update_trace("00012", res);
-	printf(res);
+	int lines;
+	//update_trace("00012", res);
+	lines = update_instructions("imem.txt");
+	//printf(res);
 	return 0;
 }
 
