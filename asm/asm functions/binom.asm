@@ -5,7 +5,7 @@ bin:	sub	$sp, $sp, $imm, 4						#adjust stack for 4 items	(every enter is 4 byte
 		sw $s0, $sp, $imm, 3						# save s0 in 3($sp)
  
 		add $v0, $zero, $imm, 1						# set vo = 1
-		bep $ra, $a1, $zero, 0						# if(k==0) , return (v0 allready set to 1)
+		beq $ra, $a1, $zero, 0						# if(k==0) , return (v0 allready set to 1)
 		beq $ra, $a1, $a0, 0						# if(k==n) , return 
 
 		sub $a0, $a0, $imm, 1						# n=n-1  (preparing for new bin calculate)
