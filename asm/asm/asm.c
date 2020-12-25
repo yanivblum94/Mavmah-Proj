@@ -103,10 +103,10 @@ int dec_from_string(char* str)//get decimal value of a string
 }
 
 //get Hex rep of a numbre including minus
-void get_hex_from_int(unsigned int num, char* hex, int numOfBytes) {
+void get_hex_from_int(unsigned int num, char* hex, int num_of_bytes) {
 
-	hex[numOfBytes] = '\0';
-	int i = numOfBytes - 1;
+	hex[num_of_bytes] = '\0';
+	int i = num_of_bytes - 1;
 
 	do {
 		hex[i] = "0123456789ABCDEF"[num % 16];
