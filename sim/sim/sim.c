@@ -19,6 +19,7 @@ static int instructions_count = 0;
 static int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
 static int hw_regs[HWREGS];//updates the values of the hardware registers
 static char instructions[MAXPC][6]={ NULL } ;
+static int instructions_mapping[MAXPC] = { 0 };//puts 0 in the array if the line is an instruction, 1 if immediate
 
 //get Hex rep of a numbre including negative
 void get_hex_from_int(unsigned int num,  int num_of_bytes, char* hex) {
@@ -50,12 +51,13 @@ void update_trace(char *inst, char* res) {// creates a string for the trace_out 
 }
 
 bool is_immediate(char* inst) {//checks if an instruction is an immediate type
-	return (inst[2] == "1" || inst[3] == "1" || inst[4] == "1");
+	return (inst[2] == '1' || inst[3] == '1' || inst[4] == '1');
 }
 
 int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place ndexed by the PC, returns num of PC's
 	int i = 0;
 	char line[LINELEN];
+	bool has_imm = false;
 	FILE *input = fopen(file_name, "r");
 	if (input == NULL) {
 		fprintf(stderr, "Can't open input file \n");
@@ -63,6 +65,13 @@ int update_instructions(char* file_name) {//updates the instructions array - put
 	}
 	while (fgets(line, LINELEN, input) != NULL) {
 		strcpy(instructions[i], line);
+		has_imm = is_immediate(line);
+		if (has_imm) {
+			i++;
+			instructions_mapping[i] = 1;
+			if (fgets(line, LINELEN, input) == NULL) { break; }
+			strcpy(instructions[i], line);
+		}
 		i++;
 	}
 	fclose(input);
