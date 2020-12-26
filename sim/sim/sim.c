@@ -75,6 +75,7 @@ int update_instructions(char* file_name) {//updates the instructions array - put
 		i++;
 	}
 	fclose(input);
+	return i;
 }
 
 int main(int argc, char** argv[]) {
