@@ -13,9 +13,13 @@
 #define HWREGS 22// number of HW Registers
 #define MEMSIZE 4096
 #define MAXPC 1024 // max val of PC
+#define SECTOR_SIZE 128 // 4 bytes each - 
+#define SECTOR_NUMBER 128 // as defined in the project
+#define PIXELS_X 352
+#define PIXELS_Y 288
 
 static int pc = 0;//static count of the PC
-static int clock_cycles = 0;//stitc counter of clockcycles
+static int clock_cycles = 0;//static counter of clockcycles
 static int tot_instructions_done = 0;//how many instructions we did
 static int total_lines = 0;//how many lines we got in the imemin file
 static int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
@@ -24,6 +28,65 @@ static char instructions[MAXPC][6]={ NULL } ;
 static int instructions_mapping[MAXPC] = { 0 };//puts 0 in the array if the line is an instruction, 1 if immediate
 static int memory[MEMSIZE];
 const static char hex_vals[22][3] = { "0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F", "10", "11", "12", "13", "14", "15" };
+static int interrupt_routine = 0; // bit to represent if the simulator is currently in interrupt routine or note (1 or 0 )
+static int disk[SECTOR_NUMBER][SECTOR_SIZE];
+static int disk_timer;
+static int monitor[PIXELS_X][PIXELS_Y];
+static int next_irq2 = -1;
+static FILE *irq2in;
+static FILE *hwRegTraceFile;
+
+
+// function to get IOreg name from number
+const char* get_IOreg_name(int r) {
+	switch (r) {
+	case 0:
+		return "irq0enable";
+	case 1:
+		return "irq1enable";
+	case 2:
+		return "irq2enable";
+	case 3:
+		return "irq0status";
+	case 4:
+		return "irq1status";
+	case 5:
+		return "irq2status";
+	case 6:
+		return "irqhandler";
+	case 7:
+		return "irqreturn";
+	case 8:
+		return "clks";
+	case 9:
+		return "leds";
+	case 10:
+		return "reserved";
+	case 11:
+		return "timerenable";
+	case 12:
+		return "timercurrent";
+	case 13:
+		return "timermax";
+	case 14:
+		return "diskcmd";
+	case 15:
+		return "disksector";
+	case 16:
+		return "diskbuffer";
+	case 17:
+		return "diskstatus";
+	case 18:
+		return "monitorcmd";
+	case 19:
+		return "monitorx";
+	case 20: 
+		return "monitory";
+	case 21:
+		return "monitordata";
+
+	}
+}
 
 //get Hex rep of a numbre including negative
 void get_hex_from_int(unsigned int num,  int num_of_bytes, char* hex) {
@@ -150,27 +213,30 @@ void handle_cmd(int pc_index, bool is_imm) {
 		memory[(proc_regs[rs_num] + proc_regs[rt_num])%MEMSIZE] = proc_regs[rd_num] ;
 		return;
 	}
-	/*todo op 18, 19, 20
 	if (op_num == 18) {//reti
-		pc = 
-		return;
+		pc = hw_regs[7] ;
+			return;
 	}
+	
 	if (op_num == 19) {//in
-		proc_regs[rd_num] = 
+		proc_regs[rd_num] = hw_regs[rs_num + rt_num];
+		write_hwRegTrace('r', rs_num + rt_num, hw_regs[rs_num + rt_num]);
 		return;
 	}
-	if (op_num == 209) {//ou
-		 = proc_regs[rd_num];
+	if (op_num == 20) {//ou
+		 hw_regs[rs_num + rt_num]= proc_regs[rd_num];
+		 write_hwRegTrace('w', rs_num + rt_num, proc_regs[rd_num]);
+
 		return;
 	}
-	*/
+	
 	if (op_num == 21) {//halt
 		pc = total_lines + 1;
 			return;
 	}
 }
 
-int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place ndexed by the PC, returns num of PC's
+int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place indexed by the PC, returns num of PC's
 	int i = 0;
 	char line[LINELEN];
 	bool has_imm = false;
@@ -216,7 +282,7 @@ void init_memory(char* file_name) {
 }
 
 void write_dmem_out(char* file_name) {
-	FILE *dmemout = fopen(file_name, 10, "w");
+	FILE *dmemout = fopen(file_name, "w");
 	if (dmemout == NULL) {
 		fprintf(stderr, "Can't open input file \n");
 		exit(1);
@@ -228,7 +294,7 @@ void write_dmem_out(char* file_name) {
 }
 
 void write_cycles(char* file_name) {//write the cycles output files
-	FILE *cycles = fopen(file_name, 10, "w");
+	FILE *cycles = fopen(file_name, "w");
 	if (cycles == NULL) {
 		fprintf(stderr, "Can't open input file \n");
 		exit(1);
@@ -239,7 +305,7 @@ void write_cycles(char* file_name) {//write the cycles output files
 }
 
 void write_regout(char* file_name) {//write the regout output file
-	FILE *regout = fopen(file_name, 10, "w");
+	FILE *regout = fopen(file_name, "w");
 	if (regout == NULL) {
 		fprintf(stderr, "Can't open input file \n");
 		exit(1);
@@ -250,16 +316,206 @@ void write_regout(char* file_name) {//write the regout output file
 	fclose(regout);
 }
 
+void timer_handler() {
+	if (hw_regs[11] == 1) { hw_regs[12]++; }
+	if (hw_regs[12] == hw_regs[13]) {
+		hw_regs[3] = 1; 
+		hw_regs[12] = 0;
+
+	}
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~DISK ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//initiate the memoty array of the HARD DISK
+void init_disk(char* file_name) {
+	int sector;
+	int offset;
+	char line[10];
+	int curr_line = 0;
+	FILE* diskin = fopen(file_name, "r");
+	if (diskin == NULL) {
+		fprintf(stderr, "Can't open input file for disk \n");
+		exit(1);
+	}
+
+	while (fgets(line, 10, diskin) != NULL) {
+		sector = curr_line / SECTOR_NUMBER;
+		offset = curr_line % SECTOR_SIZE;
+		disk[sector][offset] = strtoul(line, NULL, 16);
+		curr_line++;
+	}
+	while (curr_line < MEMSIZE) {//in case the file we got does not have all the 0 lines
+		sector = curr_line / SECTOR_NUMBER;
+		offset = curr_line % SECTOR_SIZE;
+		disk[sector][offset] = 0;
+		curr_line++;
+	}
+	fclose(diskin);
+}
+
+void write_diskout(char* file_name) {
+	FILE *diskout = fopen(file_name, "w");
+	if (diskout == NULL) {
+		fprintf(stderr, "Can't open disk output file \n");
+		exit(1);
+	}
+	for (int sector = 0; sector < SECTOR_NUMBER; sector++){
+		for (int offset = 0; offset < SECTOR_SIZE; offset++) {
+			fprintf(diskout, "08X\n", disk[sector][offset]);
+		}
+	}
+
+}
+
+void write_sector() {
+	int sector = hw_regs[15];
+	int diskBuffer = hw_regs[16];
+
+	for (int offset = 0; offset < SECTOR_NUMBER; offset++){
+		disk[sector][offset] = memory[diskBuffer + offset];
+	}
+}
+
+void read_sector() {
+	int sector = hw_regs[15];
+	int diskBuffer = hw_regs[16];
+
+	for (int offset = 0; offset < SECTOR_NUMBER; offset++) {
+		memory[diskBuffer + offset] = disk[sector][offset] ;
+	}
+}
+
+void disk_handler() {
+	if (hw_regs[17] == 0) {// check if the disk available for new instruction
+		switch (hw_regs[14]) {
+			case 1:	//read sector
+				read_sector();
+				break;
+			case 2 :// writhe sector 
+				write_sector();
+				break;
+			default:
+				break;
+		}
+		disk_timer = 0;
+	}
+
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`MONITOR ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//init monitor array to zeros
+void init_monitor() {
+	for (int x = 0; x < PIXELS_X; x++){
+		for (int y = 0; y < PIXELS_Y; y++){
+			monitor[x][y] = 0;
+
+		}
+
+	}
+}
+
+void monitor_cmd() {// update monitor pixel by definition
+	monitor[hw_regs[19]][hw_regs[20]] = hw_regs[21];
+}
+
+void write_monitor_file(char* file_name) {
+	FILE *monitorFile = fopen(file_name, "w");
+	for (int y = 0; y < PIXELS_Y; y++) {
+		for (int x = 0; x < PIXELS_X; x++) {
+			fprintf(monitorFile, "%02X\n", monitor[x][y]);
+		}
+
+	}
+
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ INTERRUPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// checking if any interupt is on - function called every clock cycle
+static int check_signal() {
+	int irq;
+	irq = (hw_regs[0] && hw_regs[3]) || (hw_regs[1] && hw_regs[4]) || (hw_regs[2] && hw_regs[5]);
+	return irq;
+}
+
+
+/* setting registers properly before moving into interput routine
+function is called if we are not in interput routine  allready
+or the current PC instruction is not imm
+*/
+static void move_to_interrupt_Routine() {
+	char* curr_inst = instructions[pc];
+	if (!is_immediate(curr_inst) && (interrupt_routine == 0)) {	// curr instruction is not imm -> move to interrput routine given we not handeling interrupt allready
+		hw_regs[7] = pc;
+		pc = hw_regs[6];
+	}
+}
+
+void irq2_handler() {
+	char line[6];
+	hw_regs[5] = 0;
+	if (next_irq2 == -1) {
+		if (fgets(line, 6, irq2in) != NULL) {
+			next_irq2 = atoi(line);
+		}
+	}
+	if (next_irq2 == pc) {
+		hw_regs[5] == 1;
+		if (fgets(line, 6, irq2in) != NULL) {
+			next_irq2 = atoi(line);
+		}
+	}
+	
+}
+
+void interrupt_handler() {
+	if (hw_regs[17] == 1) { disk_timer++; }
+
+	if (disk_timer >= 1024) {//enought time past from last disk command 
+			hw_regs[17] = 0;
+			hw_regs[14] = 0;
+			hw_regs[4] = 1;
+	}
+	if (check_signal() == 1) {
+		move_to_interrupt_Routine();
+	}
+	irq2_handler();
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~` FILE WRITES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void write_hwRegTrace(char cmd, int ioReg, int value) {
+	char temp[10];
+	get_hex_from_int(value, 8, value, temp);
+
+	switch (cmd) {
+		case 'w':
+			fprintf(hwRegTraceFile, "%d %s %s %08X\n", clock_cycles + 1, "WRITE", get_IOreg_name(ioReg), temp);
+			break;
+		case 'r':
+			fprintf(hwRegTraceFile, "%d %s %s %08X\n", clock_cycles + 1, "READ", get_IOreg_name(ioReg), temp);
+			break;
+		default:
+			break;
+	}
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MAIN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 int main(int argc, char** argv[]) {
 	char trace[160];	//update_trace("00012", res);
 	init_memory(argv[2]);
+	init_disk(argv[3]);
 	total_lines = update_instructions(argv[1]);
 	//printf(res);
 	//main loop
 	FILE *trace = fopen(argv[7], "w");
+	hwRegTraceFile = fopen(argv[8], "w");
+	irq2in = fopen(argv[4], 'r');
 	while (pc < total_lines) {
+		interrupt_handler();	// SHOULD BE ENTERED IN THE BEGINNING OF A CYCLE WICH IS NOT ON IMM INSTRUCTION
 		bool is_imm = is_immediate(instructions[pc]);
+
+		if(!is_imm){ interrupt_handler(); }
+
 		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
 		update_trace(instructions[pc], trace);
 		fprintf(trace, "%s\n", trace);
@@ -276,28 +532,10 @@ int main(int argc, char** argv[]) {
 	write_dmem_out(argv[5]);
 	write_regout(argv[6]);
 	write_cycles(argv[9]);
+	write_diskout(argv[13]);
+	write_monitor_file(argv[11]);
 	return 0;
 }
 
 
 
-// checking if any interupt is on - function called every clock cycle
-static int check_signal() {
-	int irq;
-	irq = (hw_regs[0] && hw_regs[3]) || (hw_regs[1] && hw_regs[4]) || (hw_regs[2] && hw_regs[5]);
-	return irq;
-}
-
-
-/* setting registers properly before moving into interput routine
-function is called if we are not in interput routine  allready
-or the current PC instruction is not imm
-*/
-static void move_to_interrupt_Routine() {
-	char* curr_inst = instructions[pc];
-	if (!is_immediate(curr_inst)) {	// curr instruction is not imm -> move to interrput routine
-		hw_regs[7] = pc;
-		pc = hw_regs[6];
-	}
-		// need to add a check if we are in interrupt routine and act properly 
-}
