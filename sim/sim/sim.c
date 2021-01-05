@@ -17,9 +17,9 @@
 #define SECTOR_NUMBER 128 // as defined in the project
 #define PIXELS_X 352
 #define PIXELS_Y 288
+#define MAX_CLOCK 4294967295 // 0xffffffff as defined in clks HWreg - limit 
 
 static int pc = 0;//static count of the PC
-static int clock_cycles = 0;//static counter of clockcycles
 static int tot_instructions_done = 0;//how many instructions we did
 static int total_lines = 0;//how many lines we got in the imemin file
 static int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
@@ -299,7 +299,7 @@ void write_cycles(char* file_name) {//write the cycles output files
 		fprintf(stderr, "Can't open input file \n");
 		exit(1);
 	}
-	fprintf(cycles, "%d\n", clock_cycles);
+	fprintf(cycles, "%d\n", hw_regs[8]);
 	fprintf(cycles, "%d\n", tot_instructions_done);
 	fclose(cycles);
 }
@@ -482,6 +482,13 @@ void interrupt_handler() {
 	irq2_handler();
 
 }
+
+void clock_counter() {
+	if (hw_regs[8] <= MAX_CLOCK) {
+		hw_regs[8]++;
+	}
+	else { hw_regs[8] = 0; }
+}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~` FILE WRITES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void write_hwRegTrace(char cmd, int ioReg, int value) {
 	char temp[10];
@@ -489,10 +496,10 @@ void write_hwRegTrace(char cmd, int ioReg, int value) {
 
 	switch (cmd) {
 		case 'w':
-			fprintf(hwRegTraceFile, "%d %s %s %08X\n", clock_cycles + 1, "WRITE", get_IOreg_name(ioReg), temp);
+			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "WRITE", get_IOreg_name(ioReg), temp);
 			break;
 		case 'r':
-			fprintf(hwRegTraceFile, "%d %s %s %08X\n", clock_cycles + 1, "READ", get_IOreg_name(ioReg), temp);
+			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "READ", get_IOreg_name(ioReg), temp);
 			break;
 		default:
 			break;
@@ -511,6 +518,7 @@ int main(int argc, char** argv[]) {
 	hwRegTraceFile = fopen(argv[8], "w");
 	irq2in = fopen(argv[4], 'r');
 	while (pc < total_lines) {
+		clock_counter();
 		interrupt_handler();	// SHOULD BE ENTERED IN THE BEGINNING OF A CYCLE WICH IS NOT ON IMM INSTRUCTION
 		bool is_imm = is_immediate(instructions[pc]);
 
