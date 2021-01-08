@@ -38,6 +38,9 @@ FILE *hwRegTraceFile;
 FILE *leds_file;
 FILE *trace_file;
 
+void write_hwRegTrace(char cmd, int ioReg, int value);
+
+
 //======================helpers======================
 // function to get IOreg name from number
 void get_IOreg_name(int r, char* res) {
