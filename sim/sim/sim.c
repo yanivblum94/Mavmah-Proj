@@ -195,9 +195,12 @@ void write_dmem_out(char* file_name) {
 }
 
 void update_trace(char *inst) {// updates the trace file according to format
-	fprintf(trace_file, "%03X %s", pc, inst);
+	char temp[20];
+	sprintf(temp, "%03X", pc);
+	fprintf(trace_file, "%s %s", temp, inst);
 	for (int i = 0; i < REGSNUM; i++) {
-		fprintf(trace_file, " %08X", proc_regs[i]);
+		sprintf(temp, "%08X", proc_regs[i]);
+		fprintf(trace_file, " %s", temp);
 	}
 	fputc('\n', trace_file);
 }
@@ -407,7 +410,7 @@ void clock_counter() {
 }
 
 //========================HANDLE===========================
-void handle_cmd(int pc_index, bool is_imm) {
+bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command and taken
 	//char cmd[7] = instructions[pc_index];
 	char op[3] = { instructions[pc_index][0],instructions[pc_index][1],'\0' };
 	char rd[2] = { instructions[pc_index][2], '\0' };
@@ -420,88 +423,106 @@ void handle_cmd(int pc_index, bool is_imm) {
 	//operations
 	if (op_num == 0) {//add
 		proc_regs[rd_num] = proc_regs[rs_num] + proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 1) {//sub
 		proc_regs[rd_num] = proc_regs[rs_num] - proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 2) {//and
 		proc_regs[rd_num] = proc_regs[rs_num] & proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 3) {//or
 		proc_regs[rd_num] = proc_regs[rs_num] | proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 4) {//xor
 		proc_regs[rd_num] = proc_regs[rs_num] ^ proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 5) {//mul
 		proc_regs[rd_num] = proc_regs[rs_num] * proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 6) {//sll
 		proc_regs[rd_num] = proc_regs[rs_num] << proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 7) {//sra
 		proc_regs[rd_num] = (int)proc_regs[rs_num] >> (int)proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 8) {//srl
 		proc_regs[rd_num] = proc_regs[rs_num] >> proc_regs[rt_num];
-		return;
+		return false;
 	}
 	if (op_num == 9) {//beq
-		if (proc_regs[rs_num] == proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }//taking te lowest 10 bits (3FF in hex is 1023 in dec an 10 1's in binary)
-		return;
+		if (proc_regs[rs_num] == proc_regs[rt_num]) { 
+			pc = proc_regs[rd_num] & 0x3FF;//taking te lowest 10 bits (3FF in hex is 1023 in dec an 10 1's in binary)
+			return true;
+		}
+		return false;
 	}
 	if (op_num == 10) {//bne
-		if (proc_regs[rs_num] != proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
+		if (proc_regs[rs_num] != proc_regs[rt_num]) { 
+			pc = proc_regs[rd_num] & 0x3FF;
+			return true;
+		}
+		return false;
 	}
 	if (op_num == 11) {//blt
-		if (proc_regs[rs_num] < proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
+		if (proc_regs[rs_num] < proc_regs[rt_num]) { 
+			pc = proc_regs[rd_num] & 0x3FF;
+			return true;
+		}
+		return false;
 	}
 	if (op_num == 12) {//bgt
-		if (proc_regs[rs_num] > proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
+		if (proc_regs[rs_num] > proc_regs[rt_num]) { 
+			pc = proc_regs[rd_num] & 0x3FF; 
+			return true;
+		}
+		return false;
 	}
 	if (op_num == 13) {//ble
-		if (proc_regs[rs_num] <= proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
+		if (proc_regs[rs_num] <= proc_regs[rt_num]) { 
+			pc = proc_regs[rd_num] & 0x3FF; 
+			return true;
+		}
+		return false;
 	}
 	if (op_num == 14) {//bge
-		if (proc_regs[rs_num] >= proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
+		if (proc_regs[rs_num] >= proc_regs[rt_num]) { 
+			pc = proc_regs[rd_num] & 0x3FF; 
+			return true;
+		}
+		return false;
 	}
 	if (op_num == 15) {//jal
 		if (is_imm) { proc_regs[15] = pc_index + 2; }
 		else { proc_regs[15] = pc_index + 1; }
 		pc = proc_regs[rd_num] & 0x3FF;
-		return;
+		return true;
 	}
 	if (op_num == 16) {//lw
 		proc_regs[rd_num] = memory[(proc_regs[rs_num] + proc_regs[rt_num]) % MEMSIZE];
-		return;
+		return false;
 	}
 	if (op_num == 17) {//sw
 		memory[(proc_regs[rs_num] + proc_regs[rt_num]) % MEMSIZE] = proc_regs[rd_num];
-		return;
+		return false;
 	}
 	if (op_num == 18) {//reti
 		pc = hw_regs[7];
 		interrupt_routine = 0;
-		return;
+		return false;
 	}
 
 	if (op_num == 19) {//in
 		proc_regs[rd_num] = hw_regs[rs_num + rt_num];
 		write_hwRegTrace('r', rs_num + rt_num, hw_regs[rs_num + rt_num]);
-		return;
+		return false;
 	}
 	if (op_num == 20) {//out
 		hw_regs[rs_num + rt_num] = proc_regs[rd_num];
@@ -509,12 +530,12 @@ void handle_cmd(int pc_index, bool is_imm) {
 		if (rs_num + rt_num == 9) {
 			update_leds(rd_num);
 		}
-		return;
+		return false;
 	}
 
 	if (op_num == 21) {//halt
 		pc = total_lines + 1;
-		return;
+		return true;
 	}
 }
 
@@ -538,13 +559,12 @@ int main(int argc, char** argv[]) {
 
 		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
 		update_trace(instructions[pc]);
-		handle_cmd(pc, is_imm);
-		if (is_imm) {
+		bool branch  = handle_cmd(pc, is_imm);
+		if (is_imm && !branch) {
 			pc++;
 			clock_counter();
 		}
-		pc++;
-
+		if(!branch){ pc++; }
 		tot_instructions_done++;
 	}
 	write_dmem_out(argv[5]);
