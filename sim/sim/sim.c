@@ -176,8 +176,6 @@ void write_hwRegTrace(char cmd, int ioReg, int value) {
 	//char reg_name[HWREG_MAX_LENGTH] = hwReg[ioReg];
 	get_hex_from_int(value, 8, temp);
 	printf("temp = %s \n", temp);
-	//get_IOreg_name(ioReg, *reg_name);
-	//printf("reg name = %s and reg num = %d \n", reg_name ,ioReg	 );
 	switch (cmd) {
 	case 'w':
 		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8] , "WRITE", hwReg[ioReg], temp);
@@ -534,8 +532,8 @@ bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command a
 		return false;
 	}
 	if (op_num == 20) {//out
-		hw_regs[rs_num + rt_num] = proc_regs[rd_num];
-		write_hwRegTrace('w', rs_num + rt_num, proc_regs[rd_num]);
+		hw_regs[proc_regs[rs_num + rt_num]] = proc_regs[rd_num];
+		write_hwRegTrace('w', proc_regs[rs_num + rt_num], proc_regs[rd_num]);
 		if (rs_num + rt_num == 9) {
 			update_leds(rd_num);
 		}
