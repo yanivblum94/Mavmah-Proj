@@ -129,12 +129,16 @@ bool is_immediate(char* inst) {//checks if an instruction is an immediate type
 	return (inst[2] == '1' || inst[3] == '1' || inst[4] == '1');
 }
 
+void update_leds(int index) {
+	fprintf(leds_file, "%d %08X\n", hw_regs[8], proc_regs[index]);
+}
+
 void handle_cmd(int pc_index, bool is_imm) {
-	char cmd[7] = instructions[pc_index];
-	char op[3] = { cmd[0],cmd[1],'\0' };
-	char rd[2] = { cmd[2], '\0' };
-	char rs[2] = { cmd[3], '\0' };
-	char rt[2] = { cmd[4], '\0' };
+	//char cmd[7] = instructions[pc_index];
+	char op[3] = { instructions[pc_index][0],instructions[pc_index][1],'\0' };
+	char rd[2] = { instructions[pc_index][2], '\0' };
+	char rs[2] = { instructions[pc_index][3], '\0' };
+	char rt[2] = { instructions[pc_index][4], '\0' };
 	int op_num = get_basic_hex_val(op);
 	int rd_num = get_basic_hex_val(rd);
 	int rs_num = get_basic_hex_val(rs);
@@ -240,9 +244,7 @@ void handle_cmd(int pc_index, bool is_imm) {
 	}
 }
 
-void update_leds(int index) {
-	fprintf(leds_file, "%d %08X\n", hw_regs[8], proc_regs[index]);
-}
+
 int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place indexed by the PC, returns num of PC's
 	int i = 0;
 	char line[LINELEN];
