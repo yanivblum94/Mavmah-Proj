@@ -526,14 +526,13 @@ int main(int argc, char** argv[]) {
 
 		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
 		update_trace(instructions[pc], trace);
+
 		fprintf(trace, "%s\n", trace);
-		if (is_imm) { pc++; }
+		if (is_imm) {
+			pc++;
+			clock_counter();
+		}
 		pc++;
-		/*TODO
-		Handle IO
-		Handle interrupts
-		?handle monitor?
-		*/
 
 		tot_instructions_done++;
 	}
