@@ -216,6 +216,7 @@ void handle_cmd(int pc_index, bool is_imm) {
 	}
 	if (op_num == 18) {//reti
 		pc = hw_regs[7] ;
+		interrupt_routine = 0;
 			return;
 	}
 	
@@ -454,6 +455,7 @@ static void move_to_interrupt_Routine() {
 	if (!is_immediate(curr_inst) && (interrupt_routine == 0)) {	// curr instruction is not imm -> move to interrput routine given we not handeling interrupt allready
 		hw_regs[7] = pc;
 		pc = hw_regs[6];
+		interrupt_routine = 1;
 	}
 }
 
@@ -527,10 +529,8 @@ int main(int argc, char** argv[]) {
 	irq2in = fopen(argv[4], 'r');
 	while (pc < total_lines) {
 		clock_counter();
-		interrupt_handler();	// SHOULD BE ENTERED IN THE BEGINNING OF A CYCLE WICH IS NOT ON IMM INSTRUCTION
+		interrupt_handler();	
 		bool is_imm = is_immediate(instructions[pc]);
-
-		if(!is_imm){ interrupt_handler(); }
 
 		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
 		update_trace(instructions[pc], trace);
