@@ -164,7 +164,7 @@ handle_word_cmd(char* address, char* data) {//method that updates the dmem array
 	int index, val;
 	index = dec_from_string(address);
 	val = dec_from_string(data);
-	sprintf(dmem[index], "%05X", val);
+	sprintf(dmem[index], "%08X", val);
 }
 
 
