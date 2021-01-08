@@ -174,10 +174,10 @@ void write_hwRegTrace(char cmd, int ioReg, int value) {
 	get_IOreg_name(ioReg, reg_name);
 	switch (cmd) {
 	case 'w':
-		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "WRITE", reg_name, temp);
+		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] , "WRITE", reg_name, temp);
 		break;
 	case 'r':
-		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "READ", reg_name, temp);
+		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] , "READ", reg_name, temp);
 		break;
 	default:
 		break;
