@@ -17,7 +17,9 @@
 #define SECTOR_NUMBER 128 // as defined in the project
 #define PIXELS_X 352
 #define PIXELS_Y 288
-#define MAX_CLOCK 4294967295 // 0xffffffff as defined in clks HWreg - limit 
+#define MAX_CLOCK 4294967295 // 0xffffffff as defined in clks HWreg - limit
+#define HWREG_NUM 22
+#define HWREG_MAX_LENGTH 20
 
 static unsigned int pc = 0;//static count of the PC
 static int tot_instructions_done = 0;//how many instructions we did
@@ -37,12 +39,14 @@ FILE *irq2in;
 FILE *hwRegTraceFile;
 FILE *leds_file;
 FILE *trace_file;
+const static char hwReg[HWREG_NUM][HWREG_MAX_LENGTH] = { "irq0enable" ,"irq1enable" ,"irq2enable" ,"irq0status" ,"irq1status" ,"irq2status" ,"irqhandler" ,"irqreturn" ,"clks" ,"leds" ,"reserved" ,"timerenable" ,"timercurrent" ,"timermax" ,"diskcmd" ,"disksector" ,"diskbuffer" ,"diskstatus" ,"monitorcmd" ,"monitorx" ,"monitory" ,"monitordata" };
 
 void write_hwRegTrace(char cmd, int ioReg, int value);
 
 
 //======================helpers======================
 // function to get IOreg name from number
+
 void get_IOreg_name(int r, char* res) {
 	switch (r) {
 	case 0:
@@ -169,15 +173,15 @@ void init_memory(char* file_name) {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~` FILE WRITES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void write_hwRegTrace(char cmd, int ioReg, int value) {
 	char temp[10];
+	//char reg_name[HWREG_MAX_LENGTH] = hwReg[ioReg];
 	get_hex_from_int(value, 8, temp);
-	char reg_name[20];
-	get_IOreg_name(ioReg, reg_name);
+	printf("temp = %s \n", temp);
 	switch (cmd) {
 	case 'w':
-		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "WRITE", reg_name, temp);
+		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8] , "WRITE", hwReg[ioReg], temp);
 		break;
 	case 'r':
-		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "READ", reg_name, temp);
+		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8] , "READ", hwReg[ioReg], temp);
 		break;
 	default:
 		break;
@@ -281,7 +285,7 @@ void write_diskout(char* file_name) {
 	}
 	for (int sector = 0; sector < SECTOR_NUMBER; sector++){
 		for (int offset = 0; offset < SECTOR_SIZE; offset++) {
-			fprintf(diskout, "08X\n", disk[sector][offset]);
+			fprintf(diskout, "%08X\n", disk[sector][offset]);
 		}
 	}
 
@@ -528,8 +532,8 @@ bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command a
 		return false;
 	}
 	if (op_num == 20) {//out
-		hw_regs[rs_num + rt_num] = proc_regs[rd_num];
-		write_hwRegTrace('w', rs_num + rt_num, proc_regs[rd_num]);
+		hw_regs[proc_regs[rs_num + rt_num]] = proc_regs[rd_num];
+		write_hwRegTrace('w', proc_regs[rs_num + rt_num], proc_regs[rd_num]);
 		if (rs_num + rt_num == 9) {
 			update_leds(rd_num);
 		}
