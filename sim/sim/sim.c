@@ -285,7 +285,7 @@ void write_diskout(char* file_name) {
 	}
 	for (int sector = 0; sector < SECTOR_NUMBER; sector++){
 		for (int offset = 0; offset < SECTOR_SIZE; offset++) {
-			fprintf(diskout, "08X\n", disk[sector][offset]);
+			fprintf(diskout, "%08X\n", disk[sector][offset]);
 		}
 	}
 
