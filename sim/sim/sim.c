@@ -19,25 +19,26 @@
 #define PIXELS_Y 288
 #define MAX_CLOCK 4294967295 // 0xffffffff as defined in clks HWreg - limit 
 
-static int pc = 0;//static count of the PC
+static unsigned int pc = 0;//static count of the PC
 static int tot_instructions_done = 0;//how many instructions we did
 static int total_lines = 0;//how many lines we got in the imemin file
-static int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
+static unsigned int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
 static unsigned int hw_regs[HWREGS];//updates the values of the hardware registers
 static char instructions[MAXPC][6]={ NULL } ;
-static int instructions_mapping[MAXPC] = { 0 };//puts 0 in the array if the line is an instruction, 1 if immediate
+//static int instructions_mapping[MAXPC] = { 0 };//puts 0 in the array if the line is an instruction, 1 if immediate
 static int memory[MEMSIZE];
-const static char hex_vals[22][3] = { "0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F", "10", "11", "12", "13", "14", "15" };
+//const static char hex_vals[22][3] = { "0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F", "10", "11", "12", "13", "14", "15" };
 static int interrupt_routine = 0; // bit to represent if the simulator is currently in interrupt routine or note (1 or 0 )
 static int disk[SECTOR_NUMBER][SECTOR_SIZE];
 static int disk_timer;
 static int monitor[PIXELS_X][PIXELS_Y];
 static int next_irq2 = -1;
-static FILE *irq2in;
-static FILE *hwRegTraceFile;
-static FILE *leds_file;
+FILE *irq2in;
+FILE *hwRegTraceFile;
+FILE *leds_file;
+FILE *trace_file;
 
-
+//======================helpers======================
 // function to get IOreg name from number
 void get_IOreg_name(int r, char* res) {
 	switch (r) {
@@ -89,6 +90,10 @@ void get_IOreg_name(int r, char* res) {
 	}
 }
 
+bool is_immediate(char* inst) {//checks if an instruction is an immediate type
+	return (inst[2] == '1' || inst[3] == '1' || inst[4] == '1');
+}
+
 //get Hex rep of a numbre including negative
 void get_hex_from_int(unsigned int num,  int num_of_bytes, char* hex) {
 
@@ -102,149 +107,15 @@ void get_hex_from_int(unsigned int num,  int num_of_bytes, char* hex) {
 	} while (i >= 0);
 }
 
-int get_basic_hex_val(char* hex) {
-	for (int i = 0; i < 22; i++) {
-		if (!strcmp(hex, hex_vals[i])) { return i; }
-	}
-	return -1;
-}
-
-void update_trace(char *inst, char* res) {// creates a string for the trace_out file according to the format needed
-	int i=0;
-	char regs_hex[15][12];
-	for (i; i < REGSNUM; i++) {
-		char temp[12];
-		get_hex_from_int(proc_regs[i], 8, temp);
-		strcpy(regs_hex[i], temp);
-	}
-	char temp[6];
-	get_hex_from_int(pc, 3, temp);
-	sprintf(res, "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s", temp, inst, regs_hex[0],
-		regs_hex[1], regs_hex[2], regs_hex[3], regs_hex[4], regs_hex[5], regs_hex[6], regs_hex[7],
-		regs_hex[8], regs_hex[9], regs_hex[10], regs_hex[11], regs_hex[12], regs_hex[13], regs_hex[14],
-		regs_hex[15]);
-}
-
-bool is_immediate(char* inst) {//checks if an instruction is an immediate type
-	return (inst[2] == '1' || inst[3] == '1' || inst[4] == '1');
-}
-
-void update_leds(int index) {
-	fprintf(leds_file, "%d %08X\n", hw_regs[8], proc_regs[index]);
-}
-
-void handle_cmd(int pc_index, bool is_imm) {
-	//char cmd[7] = instructions[pc_index];
-	char op[3] = { instructions[pc_index][0],instructions[pc_index][1],'\0' };
-	char rd[2] = { instructions[pc_index][2], '\0' };
-	char rs[2] = { instructions[pc_index][3], '\0' };
-	char rt[2] = { instructions[pc_index][4], '\0' };
-	int op_num = get_basic_hex_val(op);
-	int rd_num = get_basic_hex_val(rd);
-	int rs_num = get_basic_hex_val(rs);
-	int rt_num = get_basic_hex_val(rt);
-	//operations
-	if (op_num == 0) {//add
-		proc_regs[rd_num] = proc_regs[rs_num] + proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 1) {//sub
-		proc_regs[rd_num] = proc_regs[rs_num] - proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 2) {//and
-		proc_regs[rd_num] = proc_regs[rs_num] & proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 3) {//or
-		proc_regs[rd_num] = proc_regs[rs_num] | proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 4) {//xor
-		proc_regs[rd_num] = proc_regs[rs_num] ^ proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 5) {//mul
-		proc_regs[rd_num] = proc_regs[rs_num] * proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 6) {//sll
-		proc_regs[rd_num] = proc_regs[rs_num] << proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 7) {//sra
-		proc_regs[rd_num] = (int)proc_regs[rs_num] >> (int)proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 8) {//srl
-		proc_regs[rd_num] = proc_regs[rs_num] >> proc_regs[rt_num];
-		return;
-	}
-	if (op_num == 9) {//beq
-		if (proc_regs[rs_num] == proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }//taking te lowest 10 bits (3FF in hex is 1023 in dec an 10 1's in binary)
-		return;
-	}
-	if (op_num == 10) {//bne
-		if (proc_regs[rs_num] != proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
-	}
-	if (op_num == 11) {//blt
-		if (proc_regs[rs_num] < proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
-	}
-	if (op_num == 12) {//bgt
-		if (proc_regs[rs_num] > proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
-	}
-	if (op_num == 13) {//ble
-		if (proc_regs[rs_num] <= proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
-	}
-	if (op_num == 14) {//bge
-		if (proc_regs[rs_num] >= proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
-		return;
-	}
-	if (op_num == 15) {//jal
-		if (is_imm) { proc_regs[15] = pc_index + 2; }
-		else { proc_regs[15] = pc_index + 1; }
-		pc = proc_regs[rd_num] & 0x3FF;
-		return;
-	}
-	if (op_num == 16) {//lw
-		proc_regs[rd_num] = memory[(proc_regs[rs_num] + proc_regs[rt_num])%MEMSIZE];
-		return;
-	}
-	if (op_num == 17) {//sw
-		memory[(proc_regs[rs_num] + proc_regs[rt_num])%MEMSIZE] = proc_regs[rd_num] ;
-		return;
-	}
-	if (op_num == 18) {//reti
-		pc = hw_regs[7] ;
-		interrupt_routine = 0;
-			return;
-	}
-	
-	if (op_num == 19) {//in
-		proc_regs[rd_num] = hw_regs[rs_num + rt_num];
-		write_hwRegTrace('r', rs_num + rt_num, hw_regs[rs_num + rt_num]);
-		return;
-	}
-	if (op_num == 20) {//out
-		 hw_regs[rs_num + rt_num]= proc_regs[rd_num];
-		 write_hwRegTrace('w', rs_num + rt_num, proc_regs[rd_num]);
-		 if (rs_num + rt_num == 9) {
-			 update_leds(rd_num);
-		 }
-		return;
-	}
-	
-	if (op_num == 21) {//halt
-		pc = total_lines + 1;
-			return;
-	}
-}
+//int get_basic_hex_val(char* hex) {
+//	for (int i = 0; i < 22; i++) {
+//		if (!strcmp(hex, hex_vals[i])) { return i; }
+//	}
+//	return -1;
+//}
 
 
+//=========================init fuctions=============================
 int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place indexed by the PC, returns num of PC's
 	int i = 0;
 	char line[LINELEN];
@@ -259,7 +130,7 @@ int update_instructions(char* file_name) {//updates the instructions array - put
 		has_imm = is_immediate(line);
 		if (has_imm) {
 			i++;
-			instructions_mapping[i] = 1;
+			//instructions_mapping[i] = 1;
 			if (fgets(line, LINELEN, input) == NULL) { break; }
 			strcpy(instructions[i], line);
 		}
@@ -290,6 +161,24 @@ void init_memory(char* file_name) {
 	fclose(dmemin);
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~` FILE WRITES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void write_hwRegTrace(char cmd, int ioReg, int value) {
+	char temp[10];
+	get_hex_from_int(value, 8, temp);
+	char reg_name[20];
+	get_IOreg_name(ioReg, reg_name);
+	switch (cmd) {
+	case 'w':
+		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "WRITE", reg_name, temp);
+		break;
+	case 'r':
+		fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "READ", reg_name, temp);
+		break;
+	default:
+		break;
+	}
+}
+
 void write_dmem_out(char* file_name) {
 	FILE *dmemout = fopen(file_name, "w");
 	if (dmemout == NULL) {
@@ -300,6 +189,14 @@ void write_dmem_out(char* file_name) {
 		fprintf(dmemout, "%08X\n", memory[i]);
 	}
 	fclose(dmemout);
+}
+
+void update_trace(char *inst) {// updates the trace file according to format
+	fprintf(trace_file, "%03X %s", pc, inst);
+	for (int i = 0; i < REGSNUM; i++) {
+		fprintf(trace_file, " %08X", proc_regs[i]);
+	}
+	fputc('\n', trace_file);
 }
 
 void write_cycles(char* file_name) {//write the cycles output files
@@ -320,9 +217,14 @@ void write_regout(char* file_name) {//write the regout output file
 		exit(1);
 	}
 	for (int i = 2; i < REGSNUM; i++) {
-		fprintf(regout, "08X\n", proc_regs[1]);
+		fprintf(regout, "%08X\n", proc_regs[i]);
 	}
 	fclose(regout);
+}
+
+void update_leds(int index) {
+	fprintf(leds_file, "%d %08X\n", hw_regs[8], proc_regs[index]);
+
 }
 
 void timer_handler() {
@@ -447,6 +349,7 @@ static int check_signal() {
 	return irq;
 }
 
+//===========================interrupts=========================
 
 /* setting registers properly before moving into interput routine
 function is called if we are not in interput routine  allready
@@ -499,44 +402,139 @@ void clock_counter() {
 	}
 	else { hw_regs[8] = 0; }
 }
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~` FILE WRITES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void write_hwRegTrace(char cmd, int ioReg, int value) {
-	char temp[10];
-	get_hex_from_int(value, 8, value, temp);
-	char reg_name[20];
-	get_IOreg_name(ioReg, reg_name);
-	switch (cmd) {
-		case 'w':
-			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "WRITE",reg_name, temp);
-			break;
-		case 'r':
-			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "READ", reg_name, temp);
-			break;
-		default:
-			break;
+
+//========================HANDLE===========================
+void handle_cmd(int pc_index, bool is_imm) {
+	//char cmd[7] = instructions[pc_index];
+	char op[3] = { instructions[pc_index][0],instructions[pc_index][1],'\0' };
+	char rd[2] = { instructions[pc_index][2], '\0' };
+	char rs[2] = { instructions[pc_index][3], '\0' };
+	char rt[2] = { instructions[pc_index][4], '\0' };
+	int op_num = strtol(op, NULL, 16);
+	int rd_num = strtol(rd, NULL, 16);
+	int rs_num = strtol(rs, NULL, 16);
+	int rt_num = strtol(rt, NULL, 16);
+	//operations
+	if (op_num == 0) {//add
+		proc_regs[rd_num] = proc_regs[rs_num] + proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 1) {//sub
+		proc_regs[rd_num] = proc_regs[rs_num] - proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 2) {//and
+		proc_regs[rd_num] = proc_regs[rs_num] & proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 3) {//or
+		proc_regs[rd_num] = proc_regs[rs_num] | proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 4) {//xor
+		proc_regs[rd_num] = proc_regs[rs_num] ^ proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 5) {//mul
+		proc_regs[rd_num] = proc_regs[rs_num] * proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 6) {//sll
+		proc_regs[rd_num] = proc_regs[rs_num] << proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 7) {//sra
+		proc_regs[rd_num] = (int)proc_regs[rs_num] >> (int)proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 8) {//srl
+		proc_regs[rd_num] = proc_regs[rs_num] >> proc_regs[rt_num];
+		return;
+	}
+	if (op_num == 9) {//beq
+		if (proc_regs[rs_num] == proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }//taking te lowest 10 bits (3FF in hex is 1023 in dec an 10 1's in binary)
+		return;
+	}
+	if (op_num == 10) {//bne
+		if (proc_regs[rs_num] != proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
+		return;
+	}
+	if (op_num == 11) {//blt
+		if (proc_regs[rs_num] < proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
+		return;
+	}
+	if (op_num == 12) {//bgt
+		if (proc_regs[rs_num] > proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
+		return;
+	}
+	if (op_num == 13) {//ble
+		if (proc_regs[rs_num] <= proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
+		return;
+	}
+	if (op_num == 14) {//bge
+		if (proc_regs[rs_num] >= proc_regs[rt_num]) { pc = proc_regs[rd_num] & 0x3FF; }
+		return;
+	}
+	if (op_num == 15) {//jal
+		if (is_imm) { proc_regs[15] = pc_index + 2; }
+		else { proc_regs[15] = pc_index + 1; }
+		pc = proc_regs[rd_num] & 0x3FF;
+		return;
+	}
+	if (op_num == 16) {//lw
+		proc_regs[rd_num] = memory[(proc_regs[rs_num] + proc_regs[rt_num]) % MEMSIZE];
+		return;
+	}
+	if (op_num == 17) {//sw
+		memory[(proc_regs[rs_num] + proc_regs[rt_num]) % MEMSIZE] = proc_regs[rd_num];
+		return;
+	}
+	if (op_num == 18) {//reti
+		pc = hw_regs[7];
+		interrupt_routine = 0;
+		return;
+	}
+
+	if (op_num == 19) {//in
+		proc_regs[rd_num] = hw_regs[rs_num + rt_num];
+		write_hwRegTrace('r', rs_num + rt_num, hw_regs[rs_num + rt_num]);
+		return;
+	}
+	if (op_num == 20) {//out
+		hw_regs[rs_num + rt_num] = proc_regs[rd_num];
+		write_hwRegTrace('w', rs_num + rt_num, proc_regs[rd_num]);
+		if (rs_num + rt_num == 9) {
+			update_leds(rd_num);
+		}
+		return;
+	}
+
+	if (op_num == 21) {//halt
+		pc = total_lines + 1;
+		return;
 	}
 }
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MAIN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 int main(int argc, char** argv[]) {
-	char trace[160];	//update_trace("00012", res);
 	init_memory(argv[2]);
 	init_disk(argv[3]);
 	total_lines = update_instructions(argv[1]);
 	//printf(res);
 	//main loop
-	FILE *trace_file = fopen(argv[7], "w");
+	trace_file = fopen(argv[7], "w");
 	hwRegTraceFile = fopen(argv[8], "w");
 	leds_file = fopen(argv[10], "w");
-	irq2in = fopen(argv[4], 'r');
+	irq2in = fopen(argv[4], "r");
 	while (pc < total_lines) {
+		printf("%d   %d\n", pc, hw_regs[8]);
 		clock_counter();
 		interrupt_handler();	
 		bool is_imm = is_immediate(instructions[pc]);
 
 		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
-		update_trace(instructions[pc], trace);
-		fprintf(trace_file, "%s\n", trace);
+		update_trace(instructions[pc]);
 		handle_cmd(pc, is_imm);
 		if (is_imm) {
 			pc++;
