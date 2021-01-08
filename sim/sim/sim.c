@@ -37,6 +37,7 @@ static FILE *irq2in;
 static FILE *hwRegTraceFile;
 static FILE *leds_file;
 
+void write_hwRegTrace(char cmd, int ioReg, int value);
 
 // function to get IOreg name from number
 void get_IOreg_name(int r, char* res) {
