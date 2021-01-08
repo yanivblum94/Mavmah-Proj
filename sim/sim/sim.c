@@ -23,7 +23,7 @@ static int pc = 0;//static count of the PC
 static int tot_instructions_done = 0;//how many instructions we did
 static int total_lines = 0;//how many lines we got in the imemin file
 static int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
-static int hw_regs[HWREGS];//updates the values of the hardware registers
+static unsigned int hw_regs[HWREGS];//updates the values of the hardware registers
 static char instructions[MAXPC][6]={ NULL } ;
 static int instructions_mapping[MAXPC] = { 0 };//puts 0 in the array if the line is an instruction, 1 if immediate
 static int memory[MEMSIZE];
@@ -35,55 +35,56 @@ static int monitor[PIXELS_X][PIXELS_Y];
 static int next_irq2 = -1;
 static FILE *irq2in;
 static FILE *hwRegTraceFile;
+static FILE *leds_file;
 
 
 // function to get IOreg name from number
-const char* get_IOreg_name(int r) {
+void get_IOreg_name(int r, char* res) {
 	switch (r) {
 	case 0:
-		return "irq0enable";
+		res =  "irq0enable";
 	case 1:
-		return "irq1enable";
+		res =  "irq1enable";
 	case 2:
-		return "irq2enable";
+		res =  "irq2enable";
 	case 3:
-		return "irq0status";
+		res =  "irq0status";
 	case 4:
-		return "irq1status";
+		res =  "irq1status";
 	case 5:
-		return "irq2status";
+		res =  "irq2status";
 	case 6:
-		return "irqhandler";
+		res =  "irqhandler";
 	case 7:
-		return "irqreturn";
+		res =  "irqreturn";
 	case 8:
-		return "clks";
+		res =  "clks";
 	case 9:
-		return "leds";
+		res =  "leds";
 	case 10:
-		return "reserved";
+		res =  "reserved";
 	case 11:
-		return "timerenable";
+		res =  "timerenable";
 	case 12:
-		return "timercurrent";
+		res =  "timercurrent";
 	case 13:
-		return "timermax";
+		res =  "timermax";
 	case 14:
-		return "diskcmd";
+		res =  "diskcmd";
 	case 15:
-		return "disksector";
+		res =  "disksector";
 	case 16:
-		return "diskbuffer";
+		res =  "diskbuffer";
 	case 17:
-		return "diskstatus";
+		res =  "diskstatus";
 	case 18:
-		return "monitorcmd";
+		res =  "monitorcmd";
 	case 19:
-		return "monitorx";
+		res =  "monitorx";
 	case 20: 
-		return "monitory";
+		res =  "monitory";
 	case 21:
-		return "monitordata";
+		res =  "monitordata";
 
 	}
 }
@@ -223,10 +224,12 @@ void handle_cmd(int pc_index, bool is_imm) {
 		write_hwRegTrace('r', rs_num + rt_num, hw_regs[rs_num + rt_num]);
 		return;
 	}
-	if (op_num == 20) {//ou
+	if (op_num == 20) {//out
 		 hw_regs[rs_num + rt_num]= proc_regs[rd_num];
 		 write_hwRegTrace('w', rs_num + rt_num, proc_regs[rd_num]);
-
+		 if (rs_num + rt_num == 9) {
+			 update_leds(rd_num);
+		 }
 		return;
 	}
 	
@@ -236,6 +239,9 @@ void handle_cmd(int pc_index, bool is_imm) {
 	}
 }
 
+void update_leds(int index) {
+	fprintf(leds_file, "%d %08X\n", hw_regs[8], proc_regs[index]);
+}
 int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place indexed by the PC, returns num of PC's
 	int i = 0;
 	char line[LINELEN];
@@ -493,13 +499,14 @@ void clock_counter() {
 void write_hwRegTrace(char cmd, int ioReg, int value) {
 	char temp[10];
 	get_hex_from_int(value, 8, value, temp);
-
+	char reg_name[20];
+	get_IOreg_name(ioReg, reg_name);
 	switch (cmd) {
 		case 'w':
-			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "WRITE", get_IOreg_name(ioReg), temp);
+			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "WRITE",reg_name, temp);
 			break;
 		case 'r':
-			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "READ", get_IOreg_name(ioReg), temp);
+			fprintf(hwRegTraceFile, "%d %s %s %08X\n", hw_regs[8] + 1, "READ", reg_name, temp);
 			break;
 		default:
 			break;
@@ -514,8 +521,9 @@ int main(int argc, char** argv[]) {
 	total_lines = update_instructions(argv[1]);
 	//printf(res);
 	//main loop
-	FILE *trace = fopen(argv[7], "w");
+	FILE *trace_file = fopen(argv[7], "w");
 	hwRegTraceFile = fopen(argv[8], "w");
+	leds_file = fopen(argv[10], "w");
 	irq2in = fopen(argv[4], 'r');
 	while (pc < total_lines) {
 		clock_counter();
@@ -526,8 +534,8 @@ int main(int argc, char** argv[]) {
 
 		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
 		update_trace(instructions[pc], trace);
-
-		fprintf(trace, "%s\n", trace);
+		fprintf(trace_file, "%s\n", trace);
+		handle_cmd(pc, is_imm);
 		if (is_imm) {
 			pc++;
 			clock_counter();
@@ -541,6 +549,10 @@ int main(int argc, char** argv[]) {
 	write_cycles(argv[9]);
 	write_diskout(argv[13]);
 	write_monitor_file(argv[11]);
+	fclose(leds_file);
+	fclose(hwRegTraceFile);
+	fclose(irq2in);
+	fclose(trace_file);
 	return 0;
 }
 
