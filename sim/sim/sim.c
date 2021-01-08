@@ -129,12 +129,14 @@ int update_instructions(char* file_name) {//updates the instructions array - put
 		exit(1);
 	}
 	while (fgets(line, LINELEN, input) != NULL) {
+		line[5] = '\0';
 		strcpy(instructions[i], line);
 		has_imm = is_immediate(line);
 		if (has_imm) {
 			i++;
 			//instructions_mapping[i] = 1;
 			if (fgets(line, LINELEN, input) == NULL) { break; }
+			line[5] = '\0';
 			strcpy(instructions[i], line);
 		}
 		i++;
@@ -194,15 +196,16 @@ void write_dmem_out(char* file_name) {
 	fclose(dmemout);
 }
 
-void update_trace(char *inst) {// updates the trace file according to format
-	char temp[20];
-	sprintf(temp, "%03X", pc);
-	fprintf(trace_file, "%s %s", temp, inst);
+void update_trace() {// updates the trace file according to format
+	//char temp[100];
+	fprintf(trace_file, "%03X %s", pc, instructions[pc]);
+	//fputs(trace_file, temp);
 	for (int i = 0; i < REGSNUM; i++) {
-		sprintf(temp, "%08X", proc_regs[i]);
+		char temp[20];
+		sprintf(temp, " %08X", proc_regs[i]);
 		fprintf(trace_file, " %s", temp);
 	}
-	fputc('\n', trace_file);
+	fprintf(trace_file, "%s", "\n");
 }
 
 void write_cycles(char* file_name) {//write the cycles output files
@@ -547,9 +550,9 @@ int main(int argc, char** argv[]) {
 	total_lines = update_instructions(argv[1]);
 	//printf(res);
 	//main loop
-	trace_file = fopen(argv[7], "w");
-	hwRegTraceFile = fopen(argv[8], "w");
-	leds_file = fopen(argv[10], "w");
+	trace_file = fopen(argv[7], "w+");
+	hwRegTraceFile = fopen(argv[8], "w+");
+	leds_file = fopen(argv[10], "w+");
 	irq2in = fopen(argv[4], "r");
 	while (pc < total_lines) {
 		printf("%d   %d\n", pc, hw_regs[8]);
@@ -558,7 +561,7 @@ int main(int argc, char** argv[]) {
 		bool is_imm = is_immediate(instructions[pc]);
 
 		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
-		update_trace(instructions[pc]);
+		update_trace();
 		bool branch  = handle_cmd(pc, is_imm);
 		if (is_imm && !branch) {
 			pc++;
