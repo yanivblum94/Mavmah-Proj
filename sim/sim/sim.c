@@ -47,55 +47,55 @@ void write_hwRegTrace(char cmd, int ioReg, int value);
 //======================helpers======================
 // function to get IOreg name from number
 
-void get_IOreg_name(int r, char* res) {
-	switch (r) {
-	case 0:
-		res =  "irq0enable";
-	case 1:
-		res =  "irq1enable";
-	case 2:
-		res =  "irq2enable";
-	case 3:
-		res =  "irq0status";
-	case 4:
-		res =  "irq1status";
-	case 5:
-		res =  "irq2status";
-	case 6:
-		res =  "irqhandler";
-	case 7:
-		res =  "irqreturn";
-	case 8:
-		res =  "clks";
-	case 9:
-		res =  "leds";
-	case 10:
-		res =  "reserved";
-	case 11:
-		res =  "timerenable";
-	case 12:
-		res =  "timercurrent";
-	case 13:
-		res =  "timermax";
-	case 14:
-		res =  "diskcmd";
-	case 15:
-		res =  "disksector";
-	case 16:
-		res =  "diskbuffer";
-	case 17:
-		res =  "diskstatus";
-	case 18:
-		res =  "monitorcmd";
-	case 19:
-		res =  "monitorx";
-	case 20: 
-		res =  "monitory";
-	case 21:
-		res =  "monitordata";
-
-	}
-}
+//void get_IOreg_name(int r, char* res) {
+//	switch (r) {
+//	case 0:
+//		res =  "irq0enable";
+//	case 1:
+//		res =  "irq1enable";
+//	case 2:
+//		res =  "irq2enable";
+//	case 3:
+//		res =  "irq0status";
+//	case 4:
+//		res =  "irq1status";
+//	case 5:
+//		res =  "irq2status";
+//	case 6:
+//		res =  "irqhandler";
+//	case 7:
+//		res =  "irqreturn";
+//	case 8:
+//		res =  "clks";
+//	case 9:
+//		res =  "leds";
+//	case 10:
+//		res =  "reserved";
+//	case 11:
+//		res =  "timerenable";
+//	case 12:
+//		res =  "timercurrent";
+//	case 13:
+//		res =  "timermax";
+//	case 14:
+//		res =  "diskcmd";
+//	case 15:
+//		res =  "disksector";
+//	case 16:
+//		res =  "diskbuffer";
+//	case 17:
+//		res =  "diskstatus";
+//	case 18:
+//		res =  "monitorcmd";
+//	case 19:
+//		res =  "monitorx";
+//	case 20: 
+//		res =  "monitory";
+//	case 21:
+//		res =  "monitordata";
+//
+//	}
+//}
 
 bool is_immediate(char* inst) {//checks if an instruction is an immediate type
 	return (inst[2] == '1' || inst[3] == '1' || inst[4] == '1');
@@ -370,7 +370,7 @@ or the current PC instruction is not imm
 */
 static void move_to_interrupt_Routine() {
 	char* curr_inst = instructions[pc];
-	if (!is_immediate(curr_inst) && (interrupt_routine == 0)) {	// curr instruction is not imm -> move to interrput routine given we not handeling interrupt allready
+	if ( (interrupt_routine == 0)) {	// curr instruction is not imm -> move to interrput routine given we not handeling interrupt allready
 		hw_regs[7] = pc;
 		pc = hw_regs[6];
 		interrupt_routine = 1;
@@ -385,8 +385,8 @@ void irq2_handler() {
 			next_irq2 = atoi(line);
 		}
 	}
-	if (next_irq2 == pc) {
-		hw_regs[5] == 1;
+	if (next_irq2 == hw_regs[8]) {
+		hw_regs[5] = 1;
 		if (fgets(line, 6, irq2in) != NULL) {
 			next_irq2 = atoi(line);
 		}
