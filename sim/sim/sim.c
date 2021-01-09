@@ -573,7 +573,7 @@ int main(int argc, char** argv[]) {
 	leds_file = fopen(argv[10], "w+");
 	irq2in = fopen(argv[4], "r");
 	while (pc < total_lines) {
-		printf("%d   %d\n", pc, hw_regs[8]);
+		printf("%03X   %d\n", pc, hw_regs[8]);
 		clock_counter();
  		interrupt_handler();	
 		bool is_imm = is_immediate(instructions[pc]);
