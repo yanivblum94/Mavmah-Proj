@@ -190,6 +190,9 @@ void write_hwRegTrace(char cmd, int ioReg, int value) {
 	//char reg_name[HWREG_MAX_LENGTH] = hwReg[ioReg];
 	get_hex_from_int(value, 8, temp);
 	printf("temp = %s \n", temp);
+	if (ioReg == 9 && cmd == 'w') {//update leds file
+		fprintf(leds_file, "%d %08X\n", hw_regs[8], hw_regs[9]);
+	}
 	switch (cmd) {
 	case 'w':
 		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8] , "WRITE", hwReg[ioReg], temp);
@@ -247,11 +250,6 @@ void write_regout(char* file_name) {//write the regout output file
 		fprintf(regout, "%08X\n", proc_regs[i]);
 	}
 	fclose(regout);
-}
-
-void update_leds(int index) {
-	fprintf(leds_file, "%d %08X\n", hw_regs[8], proc_regs[index]);
-
 }
 
 void timer_handler() {
@@ -548,9 +546,6 @@ bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command a
 	if (op_num == 20) {//out
 		hw_regs[proc_regs[rs_num + rt_num]] = proc_regs[rd_num];
 		write_hwRegTrace('w', proc_regs[rs_num + rt_num], proc_regs[rd_num]);
-		if (rs_num + rt_num == 9) {
-			update_leds(rd_num);
-		}
 		return false;
 	}
 
@@ -573,7 +568,7 @@ int main(int argc, char** argv[]) {
 	leds_file = fopen(argv[10], "w+");
 	irq2in = fopen(argv[4], "r");
 	while (pc < total_lines) {
-		printf("%d   %d\n", pc, hw_regs[8]);
+		printf("%03X   %d\n", pc, hw_regs[8]);
 		clock_counter();
  		interrupt_handler();	
 		bool is_imm = is_immediate(instructions[pc]);
