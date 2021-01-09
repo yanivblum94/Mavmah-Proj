@@ -191,14 +191,14 @@ void write_hwRegTrace(char cmd, int ioReg, int value) {
 	get_hex_from_int(value, 8, temp);
 	printf("temp = %s \n", temp);
 	if (ioReg == 9 && cmd == 'w') {//update leds file
-		fprintf(leds_file, "%d %08X\n", hw_regs[8], hw_regs[9]);
+		fprintf(leds_file, "%d %08X\n", hw_regs[8]+1, hw_regs[9]);
 	}
 	switch (cmd) {
 	case 'w':
-		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8] , "WRITE", hwReg[ioReg], temp);
+		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8] +1, "WRITE", hwReg[ioReg], temp);
 		break;
 	case 'r':
-		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8] , "READ", hwReg[ioReg], temp);
+		fprintf(hwRegTraceFile, "%d %s %s %s\n", hw_regs[8]+1 , "READ", hwReg[ioReg], temp);
 		break;
 	default:
 		break;
@@ -397,13 +397,21 @@ void irq2_handler() {
 			next_irq2 = atoi(line);
 		}
 	}
-	if (next_irq2 == hw_regs[8]) {
+	if (next_irq2 == hw_regs[8] ) {
 		hw_regs[5] = 1;
 		if (fgets(line, 6, irq2in) != NULL) {
 			next_irq2 = atoi(line);
 		}
 	}
-	
+	else if (next_irq2 == hw_regs[8]-1 && interrupt_routine == 0) {
+		hw_regs[5] = 1;
+		if (fgets(line, 6, irq2in) != NULL) {
+			next_irq2 = atoi(line);
+		}
+		if (check_signal() == 1) {
+			move_to_interrupt_Routine();
+		}
+	}
 }
 
 void interrupt_handler() {
@@ -535,7 +543,7 @@ bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command a
 	if (op_num == 18) {//reti
 		pc = hw_regs[7];
 		interrupt_routine = 0;
-		return false;
+		return true;
 	}
 
 	if (op_num == 19) {//in
@@ -569,7 +577,7 @@ int main(int argc, char** argv[]) {
 	irq2in = fopen(argv[4], "r");
 	while (pc < total_lines) {
 		printf("%03X   %d\n", pc, hw_regs[8]);
-		clock_counter();
+		
  		interrupt_handler();	
 		bool is_imm = is_immediate(instructions[pc]);
 
@@ -578,10 +586,13 @@ int main(int argc, char** argv[]) {
 		bool branch  = handle_cmd(pc, is_imm);
 		if (is_imm && !branch) {
 			pc++;
+		}
+		if(is_imm){
 			clock_counter();
 		}
 		if(!branch){ pc++; }
 		tot_instructions_done++;
+		clock_counter();
 	}
 	write_dmem_out(argv[5]);
 	write_regout(argv[6]);
