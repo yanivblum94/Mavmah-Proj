@@ -17,14 +17,17 @@
 #define SECTOR_NUMBER 128 // as defined in the project
 #define PIXELS_X 352
 #define PIXELS_Y 288
+#define IMM_MASK 0xFFFFF
+#define PC_MASK 0x3FF
 #define MAX_CLOCK 4294967295 // 0xffffffff as defined in clks HWreg - limit
 #define HWREG_NUM 22
 #define HWREG_MAX_LENGTH 20
 
+
 static unsigned int pc = 0;//static count of the PC
 static int tot_instructions_done = 0;//how many instructions we did
 static int total_lines = 0;//how many lines we got in the imemin file
-static unsigned int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
+static int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
 static unsigned int hw_regs[HWREGS];//updates the values of the hardware registers
 static char instructions[MAXPC][6]={ NULL } ;
 //static int instructions_mapping[MAXPC] = { 0 };//puts 0 in the array if the line is an instruction, 1 if immediate
@@ -120,7 +123,18 @@ void get_hex_from_int(unsigned int num,  int num_of_bytes, char* hex) {
 //	}
 //	return -1;
 //}
+bool is_positive_imm(char* imm_hex) {
+	return!(imm_hex[0] == '8' || imm_hex[0] == '9' || imm_hex[0] == 'A' || imm_hex[0] == 'B' ||
+		imm_hex[0] == 'C' || imm_hex[0] == 'D' || imm_hex[0] == 'E' || imm_hex[0] == 'F');
+}
 
+int update_imm(char* imm_hex) {
+	int imm = (int)strtol(imm_hex, NULL, 16);
+	if (!is_positive_imm(imm_hex)) {
+		imm = ((imm & IMM_MASK) << 12) >> 12;
+	}
+	return imm;
+}
 
 //=========================init fuctions=============================
 int update_instructions(char* file_name) {//updates the instructions array - puts the instruction in the place indexed by the PC, returns num of PC's
@@ -206,7 +220,7 @@ void update_trace() {// updates the trace file according to format
 	//fputs(trace_file, temp);
 	for (int i = 0; i < REGSNUM; i++) {
 		char temp[20];
-		sprintf(temp, " %08X", proc_regs[i]);
+		get_hex_from_int(proc_regs[i], 8, temp);
 		fprintf(trace_file, " %s", temp);
 	}
 	fprintf(trace_file, "%s", "\n");
@@ -466,42 +480,42 @@ bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command a
 	}
 	if (op_num == 9) {//beq
 		if (proc_regs[rs_num] == proc_regs[rt_num]) { 
-			pc = proc_regs[rd_num] & 0x3FF;//taking te lowest 10 bits (3FF in hex is 1023 in dec an 10 1's in binary)
+			pc = proc_regs[rd_num] & PC_MASK;//taking te lowest 10 bits (3FF in hex is 1023 in dec an 10 1's in binary)
 			return true;
 		}
 		return false;
 	}
 	if (op_num == 10) {//bne
 		if (proc_regs[rs_num] != proc_regs[rt_num]) { 
-			pc = proc_regs[rd_num] & 0x3FF;
+			pc = proc_regs[rd_num] & PC_MASK;
 			return true;
 		}
 		return false;
 	}
 	if (op_num == 11) {//blt
 		if (proc_regs[rs_num] < proc_regs[rt_num]) { 
-			pc = proc_regs[rd_num] & 0x3FF;
+			pc = proc_regs[rd_num] & PC_MASK;
 			return true;
 		}
 		return false;
 	}
 	if (op_num == 12) {//bgt
 		if (proc_regs[rs_num] > proc_regs[rt_num]) { 
-			pc = proc_regs[rd_num] & 0x3FF; 
+			pc = proc_regs[rd_num] & PC_MASK;
 			return true;
 		}
 		return false;
 	}
 	if (op_num == 13) {//ble
 		if (proc_regs[rs_num] <= proc_regs[rt_num]) { 
-			pc = proc_regs[rd_num] & 0x3FF; 
+			pc = proc_regs[rd_num] & PC_MASK;
 			return true;
 		}
 		return false;
 	}
 	if (op_num == 14) {//bge
 		if (proc_regs[rs_num] >= proc_regs[rt_num]) { 
-			pc = proc_regs[rd_num] & 0x3FF; 
+			pc = proc_regs[rd_num] & PC_MASK;
 			return true;
 		}
 		return false;
@@ -509,7 +523,7 @@ bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command a
 	if (op_num == 15) {//jal
 		if (is_imm) { proc_regs[15] = pc_index + 2; }
 		else { proc_regs[15] = pc_index + 1; }
-		pc = proc_regs[rd_num] & 0x3FF;
+		pc = proc_regs[rd_num] & PC_MASK;
 		return true;
 	}
 	if (op_num == 16) {//lw
@@ -561,10 +575,10 @@ int main(int argc, char** argv[]) {
 	while (pc < total_lines) {
 		printf("%d   %d\n", pc, hw_regs[8]);
 		clock_counter();
-		interrupt_handler();	
+ 		interrupt_handler();	
 		bool is_imm = is_immediate(instructions[pc]);
 
-		if (is_imm) { proc_regs[1] = strtoul(instructions[pc + 1], NULL, 16); }//update imm value
+		if (is_imm) { proc_regs[1] = update_imm(instructions[pc+1]); }//update imm value
 		update_trace();
 		bool branch  = handle_cmd(pc, is_imm);
 		if (is_imm && !branch) {
