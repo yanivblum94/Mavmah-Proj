@@ -353,6 +353,7 @@ void init_monitor() {
 
 void monitor_cmd() {// update monitor pixel by definition
 	monitor[hw_regs[19]][hw_regs[20]] = hw_regs[21];
+	printf("changed monitor value to %d", hw_regs[21]);
 }
 
 void write_monitor_file(char* file_name) {
@@ -366,6 +367,7 @@ void write_monitor_file(char* file_name) {
 
 
 }
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ INTERRUPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // checking if any interupt is on - function called every clock cycle
 static int check_signal() {
@@ -416,6 +418,10 @@ void irq2_handler() {
 
 void interrupt_handler() {
 	if (hw_regs[17] == 1) { disk_timer++; }
+	if (hw_regs[18] == 1) {
+		monitor_cmd();
+		hw_regs[18] = 0;
+	}
 
 	if (disk_timer >= 1024) {//enought time past from last disk command 
 			hw_regs[17] = 0;
