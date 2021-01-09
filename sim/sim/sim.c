@@ -541,8 +541,8 @@ bool handle_cmd(int pc_index, bool is_imm) { // returns True if branch command a
 	}
 
 	if (op_num == 19) {//in
-		proc_regs[rd_num] = hw_regs[rs_num + rt_num];
-		write_hwRegTrace('r', rs_num + rt_num, hw_regs[rs_num + rt_num]);
+		proc_regs[rd_num] = hw_regs[proc_regs[rs_num + rt_num]];
+		write_hwRegTrace('r', proc_regs[rs_num + rt_num], hw_regs[proc_regs[rs_num + rt_num]]);
 		return false;
 	}
 	if (op_num == 20) {//out
