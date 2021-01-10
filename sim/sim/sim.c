@@ -42,6 +42,7 @@ FILE *irq2in;
 FILE *hwRegTraceFile;
 FILE *leds_file;
 FILE *trace_file;
+FILE *monitorYuv;
 const static char hwReg[HWREG_NUM][HWREG_MAX_LENGTH] = { "irq0enable" ,"irq1enable" ,"irq2enable" ,"irq0status" ,"irq1status" ,"irq2status" ,"irqhandler" ,"irqreturn" ,"clks" ,"leds" ,"reserved" ,"timerenable" ,"timercurrent" ,"timermax" ,"diskcmd" ,"disksector" ,"diskbuffer" ,"diskstatus" ,"monitorcmd" ,"monitorx" ,"monitory" ,"monitordata" };
 
 void write_hwRegTrace(char cmd, int ioReg, int value);
@@ -305,18 +306,23 @@ void monitor_cmd() {// update monitor pixel by definition
 }
 
 void write_monitor_file(char* file_name) {
+	int val;
+	char *pix = (char*)calloc(3, sizeof(char));
 	FILE *monitorFile = fopen(file_name, "w");
 	for (int y = 0; y < PIXELS_Y; y++) {
 		for (int x = 0; x < PIXELS_X; x++) {
-			fprintf(monitorFile, "%02X\n", monitor[x][y]);
+			val = monitor[x][y];
+			fprintf(monitorFile, "%02X\n", val);
+			fwrite((char*)&val, sizeof(char), 1, monitorYuv);
 		}
-
 	}
+
 
 
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ INTERRUPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//===========================interrupts=========================
+
 // checking if any interupt is on - function called every clock cycle
 static int check_signal() {
 	int irq;
@@ -324,7 +330,6 @@ static int check_signal() {
 	return irq;
 }
 
-//===========================interrupts=========================
 
 /* setting registers properly before moving into interput routine
 function is called if we are not in interput routine  allready
@@ -553,6 +558,7 @@ int main(int argc, char** argv[]) {
 	write_regout(argv[6]);
 	write_cycles(argv[9]);
 	write_diskout(argv[13]);
+	monitorYuv = fopen(argv[12],"wb");
 	write_monitor_file(argv[11]);
 	fclose(leds_file);
 	fclose(hwRegTraceFile);
