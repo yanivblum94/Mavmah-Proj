@@ -19,7 +19,7 @@ head:
 		sub $s1, $s1, $s0, 0           # x = x - r
 		add $s1, $s1, $t0, 0           # x = x + layer
 		sub $t2, $s0, $t0, 0           # n = r - layer
-		mul $t2, $t2, $imm, 1          # n = n*2
+		mul $t2, $t2, $imm, 2          # n = n*2
 		add $t2, $t2, $imm, 1          # n += 1
 		add $s2, $zero, $imm, 143      # y = 143
 		add $s2, $s2, $t0, 0           # y = y + layer
@@ -43,7 +43,7 @@ second:
 		sub $s1, $s1, $s0, 0           # x = x - r
 		add $s1, $s1, $t0, 0           # x = x + layer
 		sub $t2, $s0, $t0, 0           # n = r - layer
-		mul $t2, $t2, $imm, 1          # n = n*2
+		mul $t2, $t2, $imm, 2          # n = n*2
 		add $t2, $t2, $imm, 1          # n += 1
 		add $s2, $zero, $imm, 143      # y = 143  
 		sub $s2, $s2, $t0, 0           # y = y - layer
@@ -56,7 +56,7 @@ base:
 		sub $s1, $s1, $s0, 0           # x = x - r
 		add $s1, $s1, $t0, 0           # x = x + layer
 		sub $t2, $s0, $t0, 0           # n = r - layer
-		mul $t2, $t2, $imm, 1          # n = n*2
+		mul $t2, $t2, $imm, 2          # n = n*2
 		add $t2, $t2, $imm, 1          # n += 1
 		add $s2, $zero, $imm, 143      # y = 143 
 		sub $s2, $s2, $t0, 0           # y = y - layer

@@ -22,6 +22,15 @@
     <Filter Include="circle">
       <UniqueIdentifier>{a9e82e61-2969-48bf-9f50-4ebf5ee86cec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="disktest">
+      <UniqueIdentifier>{f81c4727-e348-437e-a9f0-401c5ad23cc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="leds">
+      <UniqueIdentifier>{eb5068ac-3ef2-4a59-bba6-2395588d98cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="mulmat">
+      <UniqueIdentifier>{fc93f0fd-08d9-4528-97f9-8e756fad0df7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="binomnew.asm">
@@ -32,6 +41,15 @@
     </None>
     <None Include="circle.asm">
       <Filter>circle</Filter>
+    </None>
+    <None Include="disktest.asm">
+      <Filter>disktest</Filter>
+    </None>
+    <None Include="leds.asm">
+      <Filter>leds</Filter>
+    </None>
+    <None Include="mulmatNew.asm">
+      <Filter>mulmat</Filter>
     </None>
   </ItemGroup>
 </Project>
