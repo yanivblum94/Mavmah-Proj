@@ -22,6 +22,9 @@
     <Filter Include="circle">
       <UniqueIdentifier>{a9e82e61-2969-48bf-9f50-4ebf5ee86cec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="disktest">
+      <UniqueIdentifier>{f81c4727-e348-437e-a9f0-401c5ad23cc9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="binomnew.asm">
@@ -32,6 +35,9 @@
     </None>
     <None Include="circle.asm">
       <Filter>circle</Filter>
+    </None>
+    <None Include="disktest.asm">
+      <Filter>disktest</Filter>
     </None>
   </ItemGroup>
 </Project>
