@@ -16,10 +16,16 @@
     <Filter Include="binom">
       <UniqueIdentifier>{4f054c38-9d40-47ab-af0b-8e3755a397f2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="bubble">
+      <UniqueIdentifier>{331157cd-e810-4661-9dc6-6862f391f272}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="binomnew.asm">
       <Filter>binom</Filter>
+    </None>
+    <None Include="bubbleNew.asm">
+      <Filter>bubble</Filter>
     </None>
   </ItemGroup>
 </Project>
