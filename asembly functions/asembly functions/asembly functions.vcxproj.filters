@@ -19,6 +19,9 @@
     <Filter Include="bubble">
       <UniqueIdentifier>{331157cd-e810-4661-9dc6-6862f391f272}</UniqueIdentifier>
     </Filter>
+    <Filter Include="circle">
+      <UniqueIdentifier>{a9e82e61-2969-48bf-9f50-4ebf5ee86cec}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="binomnew.asm">
@@ -26,6 +29,9 @@
     </None>
     <None Include="bubbleNew.asm">
       <Filter>bubble</Filter>
+    </None>
+    <None Include="circle.asm">
+      <Filter>circle</Filter>
     </None>
   </ItemGroup>
 </Project>

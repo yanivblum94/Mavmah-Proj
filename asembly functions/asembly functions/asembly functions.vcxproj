@@ -21,6 +21,7 @@
   <ItemGroup>
     <None Include="binomnew.asm" />
     <None Include="bubbleNew.asm" />
+    <None Include="circle.asm" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
