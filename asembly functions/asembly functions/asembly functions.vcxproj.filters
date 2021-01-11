@@ -25,6 +25,9 @@
     <Filter Include="disktest">
       <UniqueIdentifier>{f81c4727-e348-437e-a9f0-401c5ad23cc9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="leds">
+      <UniqueIdentifier>{eb5068ac-3ef2-4a59-bba6-2395588d98cb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="binomnew.asm">
@@ -38,6 +41,9 @@
     </None>
     <None Include="disktest.asm">
       <Filter>disktest</Filter>
+    </None>
+    <None Include="leds.asm">
+      <Filter>leds</Filter>
     </None>
   </ItemGroup>
 </Project>

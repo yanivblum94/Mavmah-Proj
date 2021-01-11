@@ -23,6 +23,7 @@
     <None Include="bubbleNew.asm" />
     <None Include="circle.asm" />
     <None Include="disktest.asm" />
+    <None Include="leds.asm" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
