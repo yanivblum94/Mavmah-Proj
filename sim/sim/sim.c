@@ -27,23 +27,21 @@
 static unsigned int pc = 0;//static count of the PC
 static int tot_instructions_done = 0;//how many instructions we did
 static int total_lines = 0;//how many lines we got in the imemin file
+static int next_irq2 = -1;
+static int disk_timer;
+static int interrupt_routine = 0; // bit to represent if the simulator is currently in interrupt routine or note (1 or 0 )
 static int proc_regs[REGSNUM] = { 0 };//updates the values of the processor registers
 static unsigned int hw_regs[HWREGS];//updates the values of the hardware registers
 static char instructions[MAXPC][6]={ NULL } ;
-//static int instructions_mapping[MAXPC] = { 0 };//puts 0 in the array if the line is an instruction, 1 if immediate
 static int memory[MEMSIZE];
-//const static char hex_vals[22][3] = { "0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F", "10", "11", "12", "13", "14", "15" };
-static int interrupt_routine = 0; // bit to represent if the simulator is currently in interrupt routine or note (1 or 0 )
-static int disk[SECTOR_NUMBER][SECTOR_SIZE];
-static int disk_timer;
 static int monitor[PIXELS_X][PIXELS_Y];
-static int next_irq2 = -1;
+static int disk[SECTOR_NUMBER][SECTOR_SIZE];
+const static char hwReg[HWREG_NUM][HWREG_MAX_LENGTH] = { "irq0enable" ,"irq1enable" ,"irq2enable" ,"irq0status" ,"irq1status" ,"irq2status" ,"irqhandler" ,"irqreturn" ,"clks" ,"leds" ,"reserved" ,"timerenable" ,"timercurrent" ,"timermax" ,"diskcmd" ,"disksector" ,"diskbuffer" ,"diskstatus" ,"monitorcmd" ,"monitorx" ,"monitory" ,"monitordata" };
 FILE *irq2in;
 FILE *hwRegTraceFile;
 FILE *leds_file;
 FILE *trace_file;
 FILE *monitorYuv;
-const static char hwReg[HWREG_NUM][HWREG_MAX_LENGTH] = { "irq0enable" ,"irq1enable" ,"irq2enable" ,"irq0status" ,"irq1status" ,"irq2status" ,"irqhandler" ,"irqreturn" ,"clks" ,"leds" ,"reserved" ,"timerenable" ,"timercurrent" ,"timermax" ,"diskcmd" ,"disksector" ,"diskbuffer" ,"diskstatus" ,"monitorcmd" ,"monitorx" ,"monitory" ,"monitordata" };
 
 void write_hwRegTrace(char cmd, int ioReg, int value);
 
@@ -201,14 +199,7 @@ void write_regout(char* file_name) {//write the regout output file
 	fclose(regout);
 }
 
-void timer_handler() {
-	if (hw_regs[11] == 1) { hw_regs[12]++; }
-	if (hw_regs[12] == hw_regs[13]) {
-		hw_regs[3] = 1; 
-		hw_regs[12] = 0;
 
-	}
-}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~DISK ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 //initiate the memoty array of the HARD DISK
@@ -322,6 +313,14 @@ void write_monitor_file(char* file_name) {
 }
 
 //===========================interrupts=========================
+void timer_handler() {
+	if (hw_regs[11] == 1) { hw_regs[12]++; }
+	if (hw_regs[12] == hw_regs[13]) {
+		hw_regs[3] = 1;
+		hw_regs[12] = 0;
+
+	}
+}
 
 // checking if any interupt is on - function called every clock cycle
 static int check_signal() {
