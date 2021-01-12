@@ -67,7 +67,8 @@ static int labels_num = 0;
 
 
 int get_reg_num(char *reg_name) {//receives name of a reg and returnes its decimal value
-	int i = 0; 
+	int i = 0;
+	if (reg_name == NULL) { return -1; }
 	for (int i = 0; i < REGSNUM; i++) {
 		if (!strcmp(reg_name, registers[i]))
 			return i;
@@ -251,7 +252,7 @@ int main(int argc, char** argv) {
 			}
 			//now we have a  pointer to a valid cmd
 			int temp = get_opcode_num(ptr);
-			char opcode_hex[5];
+			char opcode_hex[20];
 			sprintf(opcode_hex, "%02X", temp);
 			fputs(opcode_hex, output);// enter opcode
 			ptr = strtok(NULL, delim);//move to next word
