@@ -136,7 +136,6 @@ void write_hwRegTrace(char cmd, int ioReg, int value) {
 	char temp[10];
 	//char reg_name[HWREG_MAX_LENGTH] = hwReg[ioReg];
 	get_hex_from_int(value, 8, temp);
-	printf("temp = %s \n", temp);
 	if (ioReg == 9 && cmd == 'w') {//update leds file
 		fprintf(leds_file, "%d %08X\n", hw_regs[8]+1, hw_regs[9]);
 	}
@@ -293,7 +292,6 @@ void init_monitor() {
 
 void monitor_cmd() {// update monitor pixel by definition
 	monitor[hw_regs[19]][hw_regs[20]] = hw_regs[21];
-	printf("changed monitor value to %d", hw_regs[21]);
 }
 
 void write_monitor_file(char* file_name) {
@@ -532,12 +530,9 @@ int main(int argc, char** argv[]) {
 	hwRegTraceFile = fopen(argv[8], "w+");
 	leds_file = fopen(argv[10], "w+");
 	irq2in = fopen(argv[4], "r");
-	while (pc < total_lines) {
-		printf("%03X   %d\n", pc, hw_regs[8]);
-		
+	while (pc < total_lines) {		
  		interrupt_handler();	
 		bool is_imm = is_immediate(instructions[pc]);
-
 		if (is_imm) { proc_regs[1] = update_imm(instructions[pc+1]); }//update imm value
 		update_trace();
 		bool branch  = handle_cmd(pc, is_imm);
