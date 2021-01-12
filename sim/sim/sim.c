@@ -528,8 +528,6 @@ int main(int argc, char** argv[]) {
 	init_memory(argv[2]);
 	init_disk(argv[3]);
 	total_lines = update_instructions(argv[1]);
-	//printf(res);
-	//main loop
 	trace_file = fopen(argv[7], "w+");
 	hwRegTraceFile = fopen(argv[8], "w+");
 	leds_file = fopen(argv[10], "w+");
